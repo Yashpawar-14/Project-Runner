@@ -4,39 +4,50 @@ using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
 {
+    [SerializeField] private float forwardSpeed = 10f;
+    [SerializeField] private float sideSpeed = 5f;
+    [SerializeField] private float turnSpeed = 5f;
+    [SerializeField] private float turnAngle = 30f;
 
-    [SerializeField] private float speed = 2000f;
-    [SerializeField] private float switchSpeed = 1000f;
-    Rigidbody rb;
+    private Rigidbody rb;
+    private float targetRotationY = 0f;
+    private float horizontalInput;
 
-    private bool isonleft = false;
-
-
+    public bool Isrunning = false;
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        rb.freezeRotation = true; // prevent unwanted physics rotation
     }
-    // Update is called once per frame
+
     void Update()
-    {     
-        rb.AddForce(new Vector3(0, 0, speed * Time.deltaTime));
+    {
+        // Get horizontal input
+        horizontalInput = Input.GetAxis("Horizontal");
 
-        if(Input.GetMouseButton(0))
-        {
-            if (Input.mousePosition.x < Screen.width / 2)
-            {
-                transform.position = Vector3.Slerp(transform.position, new Vector3(-5, transform.position.y, transform.position.z), switchSpeed * Time.deltaTime);
-                isonleft = true;
-            }
-
-            if (Input.mousePosition.x > Screen.width / 2 && isonleft == true)
-            {
-                transform.position = Vector3.Slerp(transform.position, new Vector3(0, transform.position.y, transform.position.z), switchSpeed * Time.deltaTime);
-                isonleft = false;
-            }
-            
-        }
-
+        // Determine the target rotation
+        if (horizontalInput > 0.1f)
+            targetRotationY = turnAngle;
+        else if (horizontalInput < -0.1f)
+            targetRotationY = -turnAngle;
+        else
+            targetRotationY = 0f;
     }
-    
+
+    void FixedUpdate()
+    {
+        // Move forward constantly
+        Vector3 moveDirection = transform.forward * forwardSpeed * Time.fixedDeltaTime;
+        Isrunning = true;
+
+        // Add left/right movement
+        moveDirection += transform.right * horizontalInput * sideSpeed * Time.fixedDeltaTime;
+
+        // Move using Rigidbody (smooth and physics-safe)
+        rb.MovePosition(rb.position + moveDirection);
+
+        // Smoothly rotate the player
+        Quaternion targetRotation = Quaternion.Euler(0f, targetRotationY, 0f);
+        rb.MoveRotation(Quaternion.Lerp(rb.rotation, targetRotation, turnSpeed * Time.fixedDeltaTime));
+    }
 }
